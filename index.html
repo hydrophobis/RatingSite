@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Community Rating</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #thankYouMessage {
+            display: none;
+            color: #4CAF50;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        #tagSection label {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Rate the Community of Your Favorite Game</h1>
+
+    <!-- Game Selection Dropdown -->
+    <p>Select a game:</p>
+    <select id="gameSelect">
+        <option value="">Loading games...</option>
+    </select>
+
+    <!-- Community Rating -->
+    <p>How would you rate the community of this game?</p>
+    <form id="ratingForm">
+        <label><input type="radio" name="rating" value="1"> 1</label>
+        <label><input type="radio" name="rating" value="2"> 2</label>
+        <label><input type="radio" name="rating" value="3"> 3</label>
+        <label><input type="radio" name="rating" value="4"> 4</label>
+        <label><input type="radio" name="rating" value="5"> 5</label>
+    </form>
+
+    <!-- Tag Selection -->
+    <p>What tags would you use to describe the community?</p>
+    <div id="tagSection">
+        <label><input type="checkbox" name="tags" value="Friendly"> Friendly</label>
+        <label><input type="checkbox" name="tags" value="Toxic"> Toxic</label>
+        <label><input type="checkbox" name="tags" value="Helpful"> Helpful</label>
+        <label><input type="checkbox" name="tags" value="Competitive"> Competitive</label>
+        <label><input type="checkbox" name="tags" value="Casual"> Casual</label>
+        <!-- Add more tags as needed -->
+    </div>
+
+    <br>
+    <button type="button" onclick="submitRating()">Submit Rating</button>
+    <p id="thankYouMessage">Thank you for your feedback!</p>
+
+    <script>
+        const repo = "hydrophobis/RatingSite";
+        const branch = "main";
+        const apiUrl = `https://api.github.com/repos/${repo}/contents/ratings?ref=${branch}`;
+        const token = "";
+
+        // Load games from repo
+        async function loadGames() {
+            const headers = token ? { Authorization: `token ${token}` } : {};
+            try {
+                const response = await fetch(apiUrl, { headers });
+                if (!response.ok) throw new Error(`Error: ${response.status}`);
+                const files = await response.json();
+
+                // Populate dropdown with filenames (game names)
+                const gameSelect = document.getElementById("gameSelect");
+                gameSelect.innerHTML = files.map(file => 
+                    `<option value="${file.name.replace('.txt', '')}">${file.name.replace('.txt', '')}</option>`
+                ).join('');
+            } catch (error) {
+                console.error("Failed to load games:", error);
+                document.getElementById("gameSelect").innerHTML = "<option value=''>Error loading games</option>";
+            }
+        }
+
+        loadGames();
+
+        // Function to submit rating as a PR
+        function submitRating() {
+            const game = document.getElementById("gameSelect").value;
+            const rating = document.querySelector('input[name="rating"]:checked')?.value;
+            const tags = Array.from(document.querySelectorAll('input[name="tags"]:checked'))
+                               .map(tag => tag.value)
+                               .join(", ");
+
+            if (!game) {
+                alert("Please select a game.");
+                return;
+            }
+
+            if (!rating) {
+                alert("Please select a rating.");
+                return;
+            }
+
+            if (!tags) {
+                alert("Please select at least one tag.");
+                return;
+            }
+
+            // PR setup: define file name and content
+            const fileName = `ratings/${game}-${Date.now()}.txt`; // Unique filename based on game and timestamp
+            const fileContent = `Game: ${game}\nRating: ${rating} stars\nTags: ${tags}\nSubmitted on: ${new Date().toISOString()}`;
+
+            // GitHub URL to create a PR
+            const prUrl = `https://github.com/${repo}/new/${branch}?filename=${encodeURIComponent(fileName)}&value=${encodeURIComponent(fileContent)}`;
+
+            // Redirect user to create the PR
+            window.open(prUrl, '_blank');
+            document.getElementById("thankYouMessage").style.display = "block";
+        }
+    </script>
+</body>
+</html>
